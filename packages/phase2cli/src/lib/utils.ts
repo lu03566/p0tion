@@ -35,7 +35,7 @@ import { fileURLToPath } from "url"
 import { dirname } from "path"
 import { GithubGistFile, ProgressBarType, Timing } from "../types/index.js"
 import { COMMAND_ERRORS, CORE_SERVICES_ERRORS, showError, THIRD_PARTY_SERVICES_ERRORS } from "./errors.js"
-import { readFile } from "./files.js"
+import { directoryExists, getFileStats, readFile } from "./files.js"
 import {
     getContributionLocalFilePath,
     getFinalTranscriptLocalFilePath,
@@ -372,6 +372,15 @@ export const downloadCeremonyArtifact = async (
     const spinner = customSpinner(`Preparing for downloading the contribution...`, `clock`)
     spinner.start()
 
+    // check if the file is already downloaded
+    if (directoryExists(localPath)) {
+        spinner.stop()
+        console.log(
+            `${theme.symbols.success} The zKey was already downloaded...\n`
+        )
+        return
+    }
+
     // Request pre-signed url to make GET download request.
     const getPreSignedUrl = await generateGetObjectPreSignedUrl(cloudFunctions, bucketName, storagePath)
 
@@ -477,14 +486,39 @@ export const handleContributionComputation = async (
             numExpIterations,
             transcriptLogger
         )
-    else
-        await zKey.contribute(
-            lastZkeyLocalFilePath,
-            nextZkeyLocalFilePath,
-            contributorOrCoordinatorIdentifier,
-            entropyOrBeacon,
-            transcriptLogger
-        )
+    else {
+        // check if we already computed the zkey
+        if (directoryExists(nextZkeyLocalFilePath)) {
+            // let's check that the zkey is the same size as the previous zkey
+            const lastZkeyStats = getFileStats(lastZkeyLocalFilePath)
+            const nextZkeyStats = getFileStats(nextZkeyLocalFilePath)
+
+            if (lastZkeyStats.size !== nextZkeyStats.size) {
+                // we need to compute it again
+                await zKey.contribute(
+                    lastZkeyLocalFilePath,
+                    nextZkeyLocalFilePath,
+                    contributorOrCoordinatorIdentifier,
+                    entropyOrBeacon,
+                    transcriptLogger
+                )
+            } else {
+                computingTimer.stop()
+                spinner.stop()
+                console.log(
+                    `${theme.symbols.success} The zKey was already computed...\n`
+                )
+                return computingTimer.ms()
+            }
+        } else 
+            await zKey.contribute(
+                lastZkeyLocalFilePath,
+                nextZkeyLocalFilePath,
+                contributorOrCoordinatorIdentifier,
+                entropyOrBeacon,
+                transcriptLogger
+            )
+    }
 
     computingTimer.stop()
 

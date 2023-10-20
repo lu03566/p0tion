@@ -92,8 +92,15 @@ export const uploadParts = async (
     // Keep track of uploaded chunks.
     const uploadedChunks: Array<ETagWithPartNumber> = alreadyUploadedChunks || []
 
+    const totalChunks = chunksWithUrls.length
     // Loop through remaining chunks.
     for (let i = alreadyUploadedChunks ? alreadyUploadedChunks.length : 0; i < chunksWithUrls.length; i += 1) {
+        // Calculate the percentage of chunks uploaded
+        const percentage = Math.round(((i + 1) / totalChunks) * 100)
+        process.stdout.clearLine(0)
+        process.stdout.cursorTo(0)
+        process.stdout.write(`Uploading chunk ${i + 1} of ${totalChunks}... ${percentage}%`)
+
         // Consume the pre-signed url to upload the chunk.
         // @ts-ignore
         const response = await fetch(chunksWithUrls[i].preSignedUrl, {
