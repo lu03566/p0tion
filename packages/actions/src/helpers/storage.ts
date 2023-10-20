@@ -99,7 +99,7 @@ export const uploadParts = async (
         const percentage = Math.round(((i + 1) / totalChunks) * 100)
         process.stdout.clearLine(0)
         process.stdout.cursorTo(0)
-        process.stdout.write(`Uploading chunk ${i + 1} of ${totalChunks}... ${percentage}%`)
+        console.log(`Uploading chunk ${i + 1} of ${totalChunks}... ${percentage}%`)
 
         // Consume the pre-signed url to upload the chunk.
         // @ts-ignore

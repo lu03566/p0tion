@@ -489,27 +489,12 @@ export const handleContributionComputation = async (
     else {
         // check if we already computed the zkey
         if (directoryExists(nextZkeyLocalFilePath)) {
-            // let's check that the zkey is the same size as the previous zkey
-            const lastZkeyStats = getFileStats(lastZkeyLocalFilePath)
-            const nextZkeyStats = getFileStats(nextZkeyLocalFilePath)
-
-            if (lastZkeyStats.size !== nextZkeyStats.size) {
-                // we need to compute it again
-                await zKey.contribute(
-                    lastZkeyLocalFilePath,
-                    nextZkeyLocalFilePath,
-                    contributorOrCoordinatorIdentifier,
-                    entropyOrBeacon,
-                    transcriptLogger
-                )
-            } else {
-                computingTimer.stop()
-                spinner.stop()
-                console.log(
-                    `${theme.symbols.success} The zKey was already computed...\n`
-                )
-                return computingTimer.ms()
-            }
+            computingTimer.stop()
+            spinner.stop()
+            console.log(
+                `${theme.symbols.success} The zKey was already computed...\n`
+            )
+            return computingTimer.ms()
         } else 
             await zKey.contribute(
                 lastZkeyLocalFilePath,
@@ -744,13 +729,14 @@ export const handleStartOrResumeContribution = async (
 
     // Contribution step = UPLOADING.
     if (isFinalizing || participantData.contributionStep === ParticipantContributionStep.UPLOADING) {
-        spinner.text = `Uploading ${isFinalizing ? "final" : "your"} contribution ${
-            !isFinalizing ? theme.text.bold(`#${nextZkeyIndex}`) : ""
-        } to storage.\n${
-            theme.symbols.warning
-        } This step may take a while based on circuit size and your internet speed. Everything's fine, just be patient.`
-        spinner.start()
-
+        console.log(
+            `Uploading ${isFinalizing ? "final" : "your"} contribution ${
+                    !isFinalizing ? theme.text.bold(`#${nextZkeyIndex}`) : ""
+                } to storage.\n${
+                    theme.symbols.warning
+                } This step may take a while based on circuit size and your internet speed. Everything's fine, just be patient.`
+        )
+       
         if (!isFinalizing)
             await multiPartUpload(
                 cloudFunctions,
@@ -769,12 +755,6 @@ export const handleStartOrResumeContribution = async (
                 nextZkeyLocalFilePath,
                 Number(process.env.CONFIG_STREAM_CHUNK_SIZE_IN_MB)
             )
-
-        spinner.succeed(
-            `${
-                isFinalizing ? `Contribution` : `Contribution ${theme.text.bold(`#${nextZkeyIndex}`)}`
-            } correctly saved to storage`
-        )
 
         // Advance to next contribution step (VERIFYING) if not finalizing.
         if (!isFinalizing) {
