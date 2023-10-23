@@ -19,7 +19,7 @@ import {
     permanentlyStoreCurrentContributionTimeAndHash,
     progressToNextContributionStep,
     verifyContribution
-} from "@p0tion/actions"
+} from "@ctrlc03/actions-zkp2p"
 import { Presets, SingleBar } from "cli-progress"
 import dotenv from "dotenv"
 import { GithubAuthProvider, OAuthCredential } from "firebase/auth"
@@ -644,6 +644,8 @@ export const handleStartOrResumeContribution = async (
             `${theme.symbols.success} Contribution ${theme.text.bold(`#${lastZkeyIndex}`)} correctly downloaded`
         )
 
+        await sleep(3000)
+
         // Advance to next contribution step (COMPUTING) if not finalizing.
         if (!isFinalizing) {
             spinner.text = `Preparing for contribution computation...`
@@ -687,6 +689,8 @@ export const handleStartOrResumeContribution = async (
         // Format contribution hash.
         const contributionHash = matchContributionHash?.at(0)?.replace("\n\t\t", "")!
 
+        await sleep(500)
+
         // Make request to cloud functions to permanently store the information.
         await permanentlyStoreCurrentContributionTimeAndHash(
             cloudFunctions,
@@ -711,6 +715,8 @@ export const handleStartOrResumeContribution = async (
                 )}:${convertToDoubleDigits(computationSeconds)}`
             )}`
         )
+
+        await sleep(5000)
 
         // Advance to next contribution step (UPLOADING) if not finalizing.
         if (!isFinalizing) {
@@ -737,7 +743,10 @@ export const handleStartOrResumeContribution = async (
                 } This step may take a while based on circuit size and your internet speed. Everything's fine, just be patient.`
         )
        
-        if (!isFinalizing)
+        // create a logger object to pass to the multi part upload function
+        const logger = customProgressBar(ProgressBarType.UPLOAD, `your contribution`)
+
+        if (!isFinalizing) {
             await multiPartUpload(
                 cloudFunctions,
                 bucketName,
@@ -745,8 +754,13 @@ export const handleStartOrResumeContribution = async (
                 nextZkeyLocalFilePath,
                 Number(process.env.CONFIG_STREAM_CHUNK_SIZE_IN_MB),
                 ceremony.id,
-                participantData.tempContributionData
+                participantData.tempContributionData,
+                logger
             )
+
+            // stop it
+            logger.stop()
+        }
         else
             await multiPartUpload(
                 cloudFunctions,
@@ -755,6 +769,8 @@ export const handleStartOrResumeContribution = async (
                 nextZkeyLocalFilePath,
                 Number(process.env.CONFIG_STREAM_CHUNK_SIZE_IN_MB)
             )
+
+        await sleep(5000)
 
         // Advance to next contribution step (VERIFYING) if not finalizing.
         if (!isFinalizing) {

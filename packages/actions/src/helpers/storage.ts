@@ -87,19 +87,21 @@ export const uploadParts = async (
     contentType: string | false,
     cloudFunctions?: Functions,
     ceremonyId?: string,
-    alreadyUploadedChunks?: Array<ETagWithPartNumber>
+    alreadyUploadedChunks?: Array<ETagWithPartNumber>,
+    logger?: any 
 ): Promise<Array<ETagWithPartNumber>> => {
     // Keep track of uploaded chunks.
     const uploadedChunks: Array<ETagWithPartNumber> = alreadyUploadedChunks || []
 
-    const totalChunks = chunksWithUrls.length
+    if (logger) logger.start(chunksWithUrls.length, 0)
+    
     // Loop through remaining chunks.
     for (let i = alreadyUploadedChunks ? alreadyUploadedChunks.length : 0; i < chunksWithUrls.length; i += 1) {
         // Calculate the percentage of chunks uploaded
-        const percentage = Math.round(((i + 1) / totalChunks) * 100)
-        process.stdout.clearLine(0)
-        process.stdout.cursorTo(0)
-        console.log(`Uploading chunk ${i + 1} of ${totalChunks}... ${percentage}%`)
+        // const percentage = Math.round(((i + 1) / totalChunks) * 100)
+        // process.stdout.clearLine(0)
+        // process.stdout.cursorTo(0)
+        // console.log(`Uploading chunk ${i + 1} of ${totalChunks}... ${percentage}%`)
 
         // Consume the pre-signed url to upload the chunk.
         // @ts-ignore
@@ -135,6 +137,8 @@ export const uploadParts = async (
         // nb. this must be done only when contributing (not finalizing).
         if (!!ceremonyId && !!cloudFunctions)
             await temporaryStoreCurrentContributionUploadedChunkData(cloudFunctions, ceremonyId, chunk)
+
+        if (logger) logger.increment()
     }
 
     return uploadedChunks
@@ -165,7 +169,8 @@ export const multiPartUpload = async (
     localFilePath: string,
     configStreamChunkSize: number,
     ceremonyId?: string,
-    temporaryDataToResumeMultiPartUpload?: TemporaryParticipantContributionData
+    temporaryDataToResumeMultiPartUpload?: TemporaryParticipantContributionData,
+    logger?: any 
 ) => {
     // The unique identifier of the multi-part upload.
     let multiPartUploadId: string = ""
@@ -205,7 +210,8 @@ export const multiPartUpload = async (
         mime.lookup(localFilePath), // content-type.
         cloudFunctions,
         ceremonyId,
-        alreadyUploadedChunks
+        alreadyUploadedChunks,
+        logger 
     )
 
     // Step (3).
